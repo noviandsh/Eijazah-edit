@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit</title>
+</head>
+<body>
+
+    <h2>Halaman Edit</h2>
+    <h4>Halaman ini untuk menambahkan QR tanda tangan kepala sekolah dan menambahkan pas foto siswa</h4>
+    <a href="/">Kembali</a>
+    <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+        <p>PDF</p>
+        <input id="pdfInput" type="file" name="pdf" accept=".pdf" />
+        <p>Foto</p>
+        <input id="photoInput" type="file" name="photo" accept=".png,.jpg,.jpeg" /><br><br><br>
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>

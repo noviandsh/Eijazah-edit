@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link
+        rel="stylesheet"
+        href="/bootstrap/css/bootstrap.min.css"
+    >
+     <style>
+
+        .sidebar{
+            height:110px;
+            background:#212529;
+            left:0;
+            top:0;
+            right: 0;
+            padding:20px 0;
+        }
+        .sidebar p{
+            font-size:20px;
+            font-weight:bold;
+            margin-top: 0 !important;
+        }
+        .sidebar a{
+            color:white;
+            padding:15px;
+            text-decoration:none;
+        }
+
+        .sidebar a:hover{
+            background:#343a40;
+        }
+
+        .content{
+            margin-left:50px;
+            padding:20px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+        <p class="text-white text-center mt-3">
+            Ijazah Editor
+        </p>
+
+        <a href="/edit" onclick="navigate(event, '/edit')">
+            Edit Foto & TTD
+        </a>
+
+        <a href="/nomor" onclick="navigate(event, '/nomor')">
+            Ambil Nomor Ijazah
+        </a>
+
+    </div>
+    <hr>
+    <!-- <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+        <p>PDF</p>
+        <input id="pdfInput" type="file" name="pdf" accept=".pdf" />
+        <p>Foto</p>
+        <input id="photoInput" type="file" name="photo" accept=".png,.jpg,.jpeg" /><br><br><br>
+        <button type="submit">Upload</button>
+    </form>
+    <hr>
+    <form id="upload-no" action="/upload_no" method="POST" enctype="multipart/form-data">
+        <input id="file-input" type="file" name="files" accept=".pdf" multiple />
+        <button type="submit">Upload</button>
+    </form>
+    <hr> -->
+
+<!-- Content -->
+    <div class="content">
+
+        <div id="app">
+            <h2>Home</h2>
+            <p>Selamat datang.</p>
+        </div>
+
+    </div>
+    <!-- Bootstrap JS -->
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script>
+
+        // Fungsi untuk memuat halaman secara dinamis
+        async function loadPage(url){
+
+            const response = await fetch(url, {
+                headers:{
+                    'X-Requested-With':'XMLHttpRequest'
+                }
+            });
+
+            const html = await response.text();
+
+            document.getElementById('app').innerHTML = html;
+            initPage(url);
+        }
+
+        // Fungsi untuk menginisialisasi event listener pada halaman yang dimuat
+        function initPage(url){
+            const formEdit = document.getElementById('upload-form')
+            const formNo = document.getElementById('upload-no')
+            if(formEdit){
+                formEdit.addEventListener('submit', function (e) {
+                    e.preventDefault()
+
+                    // Fungsi untuk menangani submit form edit ijazah
+                    const formData = new FormData(this)
+                    const pdfInput = document.getElementById('pdfInput')
+                    const photoInput = document.getElementById('photoInput')
+
+                    const pdfName = pdfInput.files[0].name.replace(/\.[^/.]+$/, '').toLowerCase().split(/\s+/)
+                    const photoName = photoInput.files[0].name.replace(/\.[^/.]+$/, '').toLowerCase().split(/\s+/)
+
+                    if (pdfName.some(n => photoName.includes(n))) {
+                        fetch('/upload', {
+                            method: "POST",
+                            body: formData
+                        })
+                            .then(res => res.text())
+                            .then(msg => {
+                                alert(msg)
+                                pdfInput.value = ''
+                                photoInput.value = ''
+                            })
+                            .catch(err => console.log("error" + err.message))
+                    } else {
+                        alert('File PDF dan Foto tidak cocok')
+                    }
+                })
+            }
+            
+            if(formNo){
+                formNo.addEventListener("submit", function (e) {
+                    e.preventDefault();
+
+                    // Fungsi untuk menangani submit form ambil nomor ijazah
+                    document.getElementById("upload-no").addEventListener("submit", function (e) {
+                        e.preventDefault();
+                        const formData = new FormData(this);
+
+                        fetch("/upload_no", {
+                            method: "POST",
+                            body: formData
+                        })
+                            .then(res => res.text())
+                            .then(msg => {
+                                alert(msg)
+                                document.getElementById('file-input').value = null
+                            })
+                            .catch(err => alert("Error: " + err.message));
+                    });
+                })
+            }
+        } 
+
+        function navigate(event, url){
+
+            event.preventDefault();
+
+            history.pushState({}, '', url);
+
+            loadPage(url);
+        }
+
+        window.addEventListener('popstate', () => {
+            loadPage(location.pathname);
+        });
+
+        window.addEventListener('load', () => {
+
+            if(location.pathname !== '/'){
+                loadPage(location.pathname);
+            }
+
+        });
+        // // Fungsi untuk menangani submit form edit ijazah
+        // document.getElementById('upload-form').addEventListener('submit', function (e) {
+        //     e.preventDefault()
+        //     const formData = new FormData(this)
+        //     const pdfInput = document.getElementById('pdfInput')
+        //     const photoInput = document.getElementById('photoInput')
+
+        //     const pdfName = pdfInput.files[0].name.replace(/\.[^/.]+$/, '').toLowerCase().split(/\s+/)
+        //     const photoName = photoInput.files[0].name.replace(/\.[^/.]+$/, '').toLowerCase().split(/\s+/)
+
+        //     // if (pdfName.some(n => photoName.includes(n))) {
+        //         fetch('/upload', {
+        //             method: "POST",
+        //             body: formData
+        //         })
+        //             .then(res => res.text())
+        //             .then(msg => {
+        //                 alert(msg)
+        //                 pdfInput.value = ''
+        //                 photoInput.value = ''
+        //             })
+        //             .catch(err => console.log("error" + err.message))
+        //     // } else {
+        //     //     alert('File PDF dan Foto tidak cocok')
+        //     // }
+        // })
+
+        // Fungsi untuk menangani submit form ambil nomor ijazah
+        // document.getElementById("upload-no").addEventListener("submit", function (e) {
+        //     e.preventDefault();
+        //     const formData = new FormData(this);
+
+        //     fetch("/upload_no", {
+        //         method: "POST",
+        //         body: formData
+        //     })
+        //         .then(res => res.text())
+        //         .then(msg => {
+        //             alert(msg)
+        //             document.getElementById('file-input').value = null
+        //         })
+        //         .catch(err => alert("Error: " + err.message));
+        // });
+    </script>
+</body>
+
+</html>
