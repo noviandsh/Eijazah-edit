@@ -1,5 +1,8 @@
 {
   "name": "ijazah-edit",
+  "nodemonConfig": {
+    "ext": "js,json,html,css,ejs"
+  },
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -13,10 +16,9 @@
     "bootstrap": "^5.3.8",
     "ejs": "^5.0.2",
     "express": "^5.1.0",
-    "interactjs": "^1.10.27",
     "multer": "^2.0.1",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.7.284"
+    "pdf-poppler": "^0.2.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
