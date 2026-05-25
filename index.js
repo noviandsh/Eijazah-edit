@@ -3,12 +3,26 @@ const fs = require('fs')
 const path = require('path')
 const { PDFDocument } = require('pdf-lib')
 const multer = require('multer')
+const pdf = require('pdf-poppler')
 
 const upload = multer({ dest: 'uploads/' })
 
 const app = express()
 
 app.set('view engine', 'ejs');
+
+app.use(express.static('public'))
+
+app.use(express.json())
+
+app.use(express.urlencoded({
+    extended: true
+}))
+
+app.use(
+    '/preview',
+    express.static('preview')
+)
 // bootstrap dari node_modules
 app.use(
   '/bootstrap',
@@ -17,6 +31,7 @@ app.use(
   )
 );
 
+// fungsi untuk menambahkan image pada pdf
 const addImageToPDF = async (pdfPath, photoPath, QRPath, outputPath, photoMime) => {
     const pdfBytes = fs.readFileSync(pdfPath)
     const photoBytes = fs.readFileSync(photoPath)
@@ -78,6 +93,7 @@ const multiUpload = upload.fields([
 
 // app.use(express.static('public'))
 
+//fungsi post /upload
 app.post('/upload', multiUpload, (req, res) => {
     if (!req.files || !req.files['pdf'] || !req.files['photo']) {
             return res.status(400).send('Kedua file harus diunggah')
@@ -93,6 +109,8 @@ app.post('/upload', multiUpload, (req, res) => {
     addImageToPDF(pdfFilePath, photoFilePath, 'qr.jpg', `output/${outputName}.pdf`, photoMime)
     console.log("edit")
 })
+
+//fungsi ambil nomor 
 app.post('/upload_no', multiUpload, (req, res) => {
     console.log("nomor")
 })
@@ -119,6 +137,119 @@ app.get('/nomor', (req, res) => {
 
     res.render('index');
 });
+
+app.get('/setting', (req, res) => {
+    // if(req.headers['x-requested-with'] === 'XMLHttpRequest'){
+        const template =
+            JSON.parse(
+                fs.readFileSync(
+                    './templates/template.json'
+                )
+            )
+    //     return res.render('setting', { template });
+    // }
+
+    // res.render('index');
+    res.render('setting', { template });
+})
+
+app.post('/save-setting', (req, res) => {
+
+    const template = {
+
+        photo: {
+
+            x: Number(req.body.photo_x),
+
+            y: Number(req.body.photo_y),
+
+            width: Number(req.body.photo_width),
+
+            height: Number(req.body.photo_height)
+
+        },
+
+        qr: {
+
+            x: Number(req.body.qr_x),
+
+            y: Number(req.body.qr_y),
+
+            width: Number(req.body.qr_width),
+
+            height: Number(req.body.qr_height)
+
+        }
+
+    }
+
+    fs.writeFileSync(
+        './templates/template.json',
+        JSON.stringify(template, null, 2)
+    )
+
+    res.redirect('/setting')
+
+})
+app.post('/reset-setting', (req, res) => {
+
+    const defaultTemplate =
+        fs.readFileSync(
+            './templates/template.default.json'
+        )
+
+    fs.writeFileSync(
+        './templates/template.json',
+        defaultTemplate
+    )
+
+    res.redirect('/setting')
+
+})
+
+app.post(
+    '/upload-template',
+
+    upload.single('pdf'),
+
+    async (req, res) => {
+
+        const pdfPath =
+            req.file.path
+
+        const options = {
+
+            format: 'jpeg',
+
+            out_dir: './preview',
+
+            out_prefix: 'preview',
+
+            page: 1,
+
+            scale: 1000
+
+        }
+
+        try{
+
+            await pdf.convert(
+                pdfPath,
+                options
+            )
+
+            res.redirect('/setting')
+
+        }catch(err){
+
+            console.log(err)
+
+            res.send('Gagal convert PDF')
+
+        }
+
+    }
+)
 app.listen(3000, () => console.log(`Server berjalan di http://localhost:${3000}`))
 // multer kurang multiple input field
 
