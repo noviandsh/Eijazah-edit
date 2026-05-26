@@ -86,6 +86,7 @@ const addImageToPDF = async (pdfPath, photoPath, QRPath, outputPath, photoMime) 
     console.log("Gambar berhasil ditambahkan ke PDF: ", outputPath);
 }
 
+// konfigurasi multer untuk multiple input field
 const multiUpload = upload.fields([
     { name: 'pdf', maxCount: 1 },
     { name: 'photo', maxCount: 1 }
@@ -115,10 +116,12 @@ app.post('/upload_no', multiUpload, (req, res) => {
     console.log("nomor")
 })
 
+// fungsi untuk menampilkan halaman utama
 app.get('/', (req, res) => {
     res.render('index');
 });
 
+// fungsi untuk menampilkan halaman edit
 app.get('/edit', (req, res) => {
     // jika request dari fetch/ajax
     if(req.headers['x-requested-with'] === 'XMLHttpRequest'){
@@ -130,6 +133,7 @@ app.get('/edit', (req, res) => {
     res.render('index');
 });
 
+// fungsi untuk menampilkan halaman nomor
 app.get('/nomor', (req, res) => {
     if(req.headers['x-requested-with'] === 'XMLHttpRequest'){
         return res.render('nomor');
@@ -138,6 +142,7 @@ app.get('/nomor', (req, res) => {
     res.render('index');
 });
 
+// fungsi untuk menampilkan halaman setting
 app.get('/setting', (req, res) => {
     // if(req.headers['x-requested-with'] === 'XMLHttpRequest'){
         const template =
@@ -146,38 +151,155 @@ app.get('/setting', (req, res) => {
                     './templates/template.json'
                 )
             )
+        const pdfSize =
+            JSON.parse(
+                fs.readFileSync(
+                    './templates/pdf-size.json'
+                )
+            )
+            console.log(pdfSize)
     //     return res.render('setting', { template });
     // }
 
     // res.render('index');
-    res.render('setting', { template });
+    res.render('setting', { template: template, pdfSize: pdfSize });
 })
 
+// fungsi untuk menyimpan setting template
 app.post('/save-setting', (req, res) => {
+    // baca template lama
 
-    const template = {
+    const template =
+        JSON.parse(
+            fs.readFileSync(
+                './templates/template.json'
+            )
+        )
+
+    // ukuran pdf asli
+
+    const pdfWidth =
+        template.pdf.width
+
+    const pdfHeight =
+        template.pdf.height
+
+    // ukuran preview jpg
+
+    const previewWidth =
+        template.preview.width
+
+    const previewHeight =
+        template.preview.height
+
+
+    // hitung scale
+
+    const scaleX =
+        pdfWidth / previewWidth
+
+    const scaleY =
+        pdfHeight / previewHeight
+
+    // =====================
+    // FOTO
+    // =====================
+
+    const previewPhotoX =
+        Number(req.body.photo_x)
+
+    const previewPhotoY =
+        Number(req.body.photo_y)
+
+    const previewPhotoWidth =
+        Number(req.body.photo_width)
+
+    const previewPhotoHeight =
+        Number(req.body.photo_height)
+
+    // konversi ke koordinat pdf
+
+    const photoX =
+        previewPhotoX * scaleX
+
+    const photoY =
+        pdfHeight
+        - (previewPhotoY * scaleY)
+        - (previewPhotoHeight * scaleY)
+
+    const photoWidth =
+        previewPhotoWidth * scaleX
+
+    const photoHeight =
+        previewPhotoHeight * scaleY
+
+
+    // =====================
+    // QR
+    // =====================
+
+    const previewQrX =
+        Number(req.body.qr_x)
+
+    const previewQrY =
+        Number(req.body.qr_y)
+
+    const previewQrWidth =
+        Number(req.body.qr_width)
+
+    const previewQrHeight =
+        Number(req.body.qr_height)
+
+    const qrX =
+        previewQrX * scaleX
+
+    const qrY =
+        pdfHeight
+        - (previewQrY * scaleY)
+        - (previewQrHeight * scaleY)
+
+    const qrWidth =
+        previewQrWidth * scaleX
+
+    const qrHeight =
+        previewQrHeight * scaleY
+
+    // buat template baru dengan skala yang sudah dihitung
+
+
+    const newTemplate = {
+
+        pdf: template.pdf,
+
+        preview: template.preview,
 
         photo: {
 
-            x: Number(req.body.photo_x),
+            // koordinat preview
+            previewX: previewPhotoX,
+            previewY: previewPhotoY,
+            previewWidth: previewPhotoWidth,
+            previewHeight: previewPhotoHeight,
 
-            y: Number(req.body.photo_y),
-
-            width: Number(req.body.photo_width),
-
-            height: Number(req.body.photo_height)
+            // koordinat pdf
+            x: photoX,
+            y: photoY,
+            width: photoWidth,
+            height: photoHeight
 
         },
 
         qr: {
 
-            x: Number(req.body.qr_x),
+            previewX: previewQrX,
+            previewY: previewQrY,
+            previewWidth: previewQrWidth,
+            previewHeight: previewQrHeight,
 
-            y: Number(req.body.qr_y),
-
-            width: Number(req.body.qr_width),
-
-            height: Number(req.body.qr_height)
+            x: qrX,
+            y: qrY,
+            width: qrWidth,
+            height: qrHeight
 
         }
 
@@ -185,12 +307,14 @@ app.post('/save-setting', (req, res) => {
 
     fs.writeFileSync(
         './templates/template.json',
-        JSON.stringify(template, null, 2)
+        JSON.stringify(newTemplate, null, 2)
     )
 
     res.redirect('/setting')
 
 })
+
+// fungsi untuk mereset setting template ke default
 app.post('/reset-setting', (req, res) => {
 
     const defaultTemplate =
@@ -207,49 +331,48 @@ app.post('/reset-setting', (req, res) => {
 
 })
 
-app.post(
-    '/upload-template',
+// fungsi untuk mengupload template PDF dan menampilkan preview
+app.post('/upload-template', upload.single('pdf'), async (req, res) => {
+    
+    const pdfBytes = fs.readFileSync(req.file.path)
+    const pdfDoc = await PDFDocument.load(pdfBytes)
+    const pages = pdfDoc.getPages()
+    const firstPage = pages[0]
+    const { width, height } = firstPage.getSize()
 
-    upload.single('pdf'),
-
-    async (req, res) => {
-
-        const pdfPath =
-            req.file.path
-
-        const options = {
-
-            format: 'jpeg',
-
-            out_dir: './preview',
-
-            out_prefix: 'preview',
-
-            page: 1,
-
-            scale: 1000
-
-        }
-
-        try{
-
-            await pdf.convert(
-                pdfPath,
-                options
-            )
-
-            res.redirect('/setting')
-
-        }catch(err){
-
-            console.log(err)
-
-            res.send('Gagal convert PDF')
-
-        }
-
+    const template = {
+        pdf: {
+            width,
+            height
+        },
     }
-)
+
+    
+
+    const pdfPath =
+        req.file.path
+    const options = {
+        format: 'jpeg',
+        out_dir: './preview',
+        out_prefix: 'preview',
+        page: 1,
+        scale: 1000
+    }
+    try{
+        await pdf.convert(
+            pdfPath,
+            options
+        )
+        fs.writeFileSync(
+            './templates/pdf-size.json',
+            JSON.stringify(template, null, 2)
+        )
+        res.redirect('/setting')
+    }catch(err){
+        console.log(err)
+        res.send('Gagal convert PDF')
+    }
+})
 app.listen(3000, () => console.log(`Server berjalan di http://localhost:${3000}`))
 // multer kurang multiple input field
 
